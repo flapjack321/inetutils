@@ -1,0 +1,25 @@
+language: c
+compiler:
+  - gcc
+sudo: required
+dist: trusty
+env:
+  global:
+    # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
+    #   via the "travis encrypt" command using the project repo's public key
+    - secure: "DsMgDKiOxxGsiLKjtl5Pdr9Ny7cCYdsh/WnmtE86Dpjm0YS4egyKod6fAbRy79Ena3pmTYaEmkbe4AKqnE0zvCjdJOz8p1NziqHoi7cOhfhXvSzxrWptmD4xvkRjJ7pp3P1VSRO2K4qT1Q+JxGptRAYbGtQmM/DbVWeDdxMkajw="
+addons:
+  coverity_scan:
+    project:
+      name: guillemj/inetutils
+      description: GNU Network Utilities
+    notification_email: guillem@debian.org
+    build_command_prepend: ./bootstrap && ./configure
+    build_command: make
+    branch_pattern: coverity_scan
+before_install:
+  - sudo apt-get update -qq
+install:
+  - sudo apt-get install -y netbase net-tools autotools-dev autoconf automake bison texinfo help2man libreadline-dev libncurses-dev libpam0g-dev libwrap0-dev libshishi-dev
+script:
+  - if [ ${COVERITY_SCAN_BRANCH} != 1 ]; then ./bootstrap && ./configure && make check ; fi
