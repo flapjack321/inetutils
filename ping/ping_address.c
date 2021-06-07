@@ -48,10 +48,10 @@
 
 static int recv_address (int code, void *closure,
 			 struct sockaddr_in *dest, struct sockaddr_in *from,
-			 struct ip *ip, icmphdr_t * icmp, int datalen);
+			 struct ip_hdr *ip, icmphdr_t * icmp, int datalen);
 static void print_address (int dupflag, void *closure,
 			   struct sockaddr_in *dest, struct sockaddr_in *from,
-			   struct ip *ip, icmphdr_t * icmp, int datalen);
+			   struct ip_hdr *ip, icmphdr_t * icmp, int datalen);
 static int address_finish (void);
 
 int
@@ -62,8 +62,10 @@ ping_address (char *hostname)
   ping_set_packetsize (ping, ICMP_MASKLEN);
   ping_set_count (ping, 1);
 
-  if (ping_set_dest (ping, hostname))
-    error (EXIT_FAILURE, 0, "unknown host");
+  if (ping_set_dest (ping, hostname)) {
+		fprintf(stderr, "unknown host\n");
+		exit(EXIT_FAILURE);
+	}
 
   printf ("PING %s (%s): sending address mask request\n",
 	  ping->ping_hostname, inet_ntoa (ping->ping_dest.ping_sockaddr.sin_addr));
@@ -75,7 +77,7 @@ ping_address (char *hostname)
 int
 recv_address (int code, void *closure,
 	      struct sockaddr_in *dest, struct sockaddr_in *from,
-	      struct ip *ip, icmphdr_t * icmp, int datalen)
+	      struct ip_hdr *ip, icmphdr_t * icmp, int datalen)
 {
   switch (code)
     {
@@ -94,7 +96,7 @@ void
 print_address (int dupflag, void *closure _GL_UNUSED_PARAMETER,
 	       struct sockaddr_in *dest _GL_UNUSED_PARAMETER,
 	       struct sockaddr_in *from,
-	       struct ip *ip _GL_UNUSED_PARAMETER,
+	       struct ip_hdr *ip _GL_UNUSED_PARAMETER,
 	       icmphdr_t * icmp, int datalen)
 {
   struct in_addr addr;
