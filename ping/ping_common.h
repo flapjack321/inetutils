@@ -21,9 +21,9 @@
 #include <netinet/in_systm.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
-#include <netinet/icmp6.h>
+#include <lwip/prot/icmp6.h>
 #include <icmp.h>
-#include <error.h>
+// #include <error.h>
 #include <progname.h>
 
 #include <stdbool.h>
@@ -90,7 +90,7 @@ typedef int (*ping_efp) (int code,
 			 void *closure,
 			 struct sockaddr_in * dest,
 			 struct sockaddr_in * from,
-			 struct ip * ip, icmphdr_t * icmp, int datalen);
+			 struct ip_hdr * ip, icmphdr_t * icmp, int datalen);
 
 union event {
   ping_efp6 handler6;
