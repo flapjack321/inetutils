@@ -48,14 +48,20 @@ ping_cvt_number (const char *optarg, size_t maxval, int allow_zero)
   unsigned long int n;
 
   n = strtoul (optarg, &p, 0);
-  if (*p)
-    error (EXIT_FAILURE, 0, "invalid value (`%s' near `%s')", optarg, p);
+  if (*p) {
+    fprintf(stderr, "invalid value( `%s' near `%s')\n", optarg, p);
+    exit(EXIT_FAILURE);
+  }
 
-  if (n == 0 && !allow_zero)
-    error (EXIT_FAILURE, 0, "option value too small: %s", optarg);
+  if (n == 0 && !allow_zero) {
+    fprintf(stderr, "option value too small: %s\n", optarg);
+    exit(EXIT_FAILURE);
+  }
 
-  if (maxval && n > maxval)
-    error (EXIT_FAILURE, 0, "option value too big: %s", optarg);
+  if (maxval && n > maxval) {
+    fprintf(stderr, "option value too big: %s\n", optarg);
+    exit(EXIT_FAILURE);
+  }
 
   return n;
 }
@@ -95,8 +101,10 @@ decode_pattern (const char *text, int *pattern_len,
 
   for (i = 0; *text && i < *pattern_len; i++)
     {
-      if (sscanf (text, "%2x%n", &c, &off) != 1)
-        error (EXIT_FAILURE, 0, "error in pattern near %s", text);
+      if (sscanf (text, "%2x%n", &c, &off) != 1) {
+        fprintf(stderr, "error in pattern near %s\n", text);
+        exit(EXIT_FAILURE);
+      }
 
       text += off;
       pattern_data[i] = c;
