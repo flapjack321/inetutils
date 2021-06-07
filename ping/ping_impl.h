@@ -31,4 +31,4 @@ extern size_t data_length;
 extern int ping_run (PING * ping, int (*finish) ());
 extern int ping_finish (void);
 extern void print_icmp_header (struct sockaddr_in *from,
-			       struct ip *ip, icmphdr_t * icmp, int len);
+			       struct ip_hdr *ip, icmphdr_t * icmp, int len);
