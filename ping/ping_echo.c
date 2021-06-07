@@ -25,6 +25,8 @@
 #include <sys/file.h>
 #include <sys/time.h>
 
+#include <lwip/prot/ip4.h>
+
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
@@ -55,15 +57,15 @@
 
 static int handler (int code, void *closure,
 		    struct sockaddr_in *dest, struct sockaddr_in *from,
-		    struct ip *ip, icmphdr_t * icmp, int datalen);
+		    struct ip_hdr *ip, icmphdr_t * icmp, int datalen);
 int print_echo (int dup, struct ping_stat *stat,
 		struct sockaddr_in *dest, struct sockaddr_in *from,
-		struct ip *ip, icmphdr_t * icmp, int datalen);
+		struct ip_hdr *ip, icmphdr_t * icmp, int datalen);
 static int echo_finish (void);
 
 void print_icmp_header (struct sockaddr_in *from,
-			struct ip *ip, icmphdr_t * icmp, int len);
-static void print_ip_opt (struct ip *ip, int hlen);
+			struct ip_hdr *ip, icmphdr_t * icmp, int len);
+static void print_ip_opt (struct ip_hdr *ip, int hlen);
 
 int
 ping_echo (char *hostname)
@@ -74,8 +76,10 @@ ping_echo (char *hostname)
   struct ping_stat ping_stat;
   int status;
 
-  if (options & OPT_FLOOD && options & OPT_INTERVAL)
-    error (EXIT_FAILURE, 0, "-f and -i incompatible options");
+  if (options & OPT_FLOOD && options & OPT_INTERVAL) {
+		fprintf(stderr, "-f and -i incompatible options\n");
+		exit(EXIT_FAILURE);
+	}
 
   memset (&ping_stat, 0, sizeof (ping_stat));
   ping_stat.tmin = 999999999.0;
@@ -84,8 +88,10 @@ ping_echo (char *hostname)
   ping_set_packetsize (ping, data_length);
   ping_set_event_handler (ping, handler, &ping_stat);
 
-  if (ping_set_dest (ping, hostname))
-    error (EXIT_FAILURE, 0, "unknown host");
+  if (ping_set_dest (ping, hostname)) {
+		fprintf(stderr, "unknown host\n");
+		exit(EXIT_FAILURE);
+	}
 
   if (options & OPT_RROUTE)
     {
@@ -95,11 +101,13 @@ ping_echo (char *hostname)
       rspace[IPOPT_OLEN] = sizeof (rspace) - 1;
       rspace[IPOPT_OFFSET] = IPOPT_MINOFF;
       if (setsockopt (ping->ping_fd, IPPROTO_IP,
-		      IP_OPTIONS, rspace, sizeof (rspace)) < 0)
-        error (EXIT_FAILURE, errno, "setsockopt");
+		      IP_OPTIONS, rspace, sizeof (rspace)) < 0) {
+						fprintf(stderr, "setsockopt(IP_PROTO, IP_OPTIONS)\n");
+						exit(EXIT_FAILURE);
+					}
 #else
-      error (EXIT_FAILURE, 0, "record route not available in this "
-             "implementation.");
+			fprintf(stderr, "record route not available in this implementation\n");
+			exit(EXIT_FAILURE);
 #endif /* IP_OPTIONS */
     }
   else if (options & OPT_IPTIMESTAMP)
@@ -132,11 +140,13 @@ ping_echo (char *hostname)
 # endif /* !IPOPT_POS_OV_FLG */
 
       if (setsockopt (ping->ping_fd, IPPROTO_IP,
-		      IP_OPTIONS, rspace, rspace[IPOPT_OLEN]) < 0)
-        error (EXIT_FAILURE, errno, "setsockopt");
+		      IP_OPTIONS, rspace, rspace[IPOPT_OLEN]) < 0) {
+						fprintf(stderr, "setsockopt(IPPROTO_IP, IP_OPTIONS)\n");
+						exit(EXIT_FAILURE);
+					}
 #else /* !IP_OPTIONS */
-      error (EXIT_FAILURE, 0, "IP timestamp not available in this "
-             "implementation.");
+			fprintf(stderr, "IP timestamp not available in this implementation\n");
+			exit(EXIT_FAILURE);
 #endif /* IP_OPTIONS */
     }
 
@@ -156,7 +166,7 @@ ping_echo (char *hostname)
 int
 handler (int code, void *closure,
 	 struct sockaddr_in *dest, struct sockaddr_in *from,
-	 struct ip *ip, icmphdr_t * icmp, int datalen)
+	 struct ip_hdr *ip, icmphdr_t * icmp, int datalen)
 {
   switch (code)
     {
@@ -176,7 +186,7 @@ int
 print_echo (int dupflag, struct ping_stat *ping_stat,
 	    struct sockaddr_in *dest _GL_UNUSED_PARAMETER,
 	    struct sockaddr_in *from,
-	    struct ip *ip, icmphdr_t * icmp, int datalen)
+	    struct ip_hdr *ip, icmphdr_t * icmp, int datalen)
 {
   int hlen;
   struct timeval tv;
@@ -186,7 +196,8 @@ print_echo (int dupflag, struct ping_stat *ping_stat,
   gettimeofday (&tv, NULL);
 
   /* Length of IP header */
-  hlen = ip->ip_hl << 2;
+  // hlen = ip->ip_hl << 2;
+	hlen = IPH_HL(ip);
 
   /* Length of ICMP header+payload */
   datalen -= hlen;
@@ -224,7 +235,7 @@ print_echo (int dupflag, struct ping_stat *ping_stat,
   printf ("%d bytes from %s: icmp_seq=%u", datalen,
 	  inet_ntoa (*(struct in_addr *) &from->sin_addr.s_addr),
 	  ntohs (icmp->icmp_seq));
-  printf (" ttl=%d", ip->ip_ttl);
+  printf (" ttl=%d", ip->_ttl);
   if (timing)
     printf (" time=%.3f ms", triptime);
   if (dupflag)
@@ -298,12 +309,13 @@ print_icmp_code (int type, int code, char *prefix)
 }
 
 static void
-print_ip_header (struct ip *ip)
+print_ip_header (struct ip_hdr *ip)
 {
   size_t hlen;
   unsigned char *cp;
 
-  hlen = ip->ip_hl << 2;
+  // hlen = ip->ip_hl << 2;
+	hlen = IPH_HL(ip);
   cp = (unsigned char *) ip + sizeof (*ip);	/* point to options */
 
   if (options & OPT_VERBOSE)
@@ -319,19 +331,19 @@ print_ip_header (struct ip *ip)
 
   printf
     ("Vr HL TOS  Len   ID Flg  off TTL Pro  cks      Src\tDst\tData\n");
-  printf (" %1x  %1x  %02x", ip->ip_v, ip->ip_hl, ip->ip_tos);
+  printf (" %1x  %1x  %02x", IPH_V(ip), IPH_HL(ip), IPH_TOS(ip));
   /*
    * The member `ip_len' is not portably reported in any byte order.
    * Use a simple heuristic to print a reasonable value.
    */
   printf (" %04x %04x",
-	  (ip->ip_len > 0x2000) ? ntohs (ip->ip_len) : ip->ip_len,
-	  ntohs (ip->ip_id));
-  printf ("   %1x %04x", (ntohs (ip->ip_off) & 0xe000) >> 13,
-	  ntohs (ip->ip_off) & 0x1fff);
-  printf ("  %02x  %02x %04x", ip->ip_ttl, ip->ip_p, ntohs (ip->ip_sum));
-  printf (" %s ", inet_ntoa (*((struct in_addr *) &ip->ip_src)));
-  printf (" %s ", inet_ntoa (*((struct in_addr *) &ip->ip_dst)));
+	  (ip->_len > 0x2000) ? ntohs (ip->_len) : ip->_len,
+	  ntohs (ip->_id));
+  printf ("   %1x %04x", (ntohs (ip->_offset) & 0xe000) >> 13,
+	  ntohs (ip->_offset) & 0x1fff);
+  printf ("  %02x  %02x %04x", ip->_ttl, ip->_proto, ntohs (ip->_chksum));
+  printf (" %s ", inet_ntoa (*((struct in_addr *) &ip->src)));
+  printf (" %s ", inet_ntoa (*((struct in_addr *) &ip->dest)));
   while (hlen-- > sizeof (*ip))
     printf ("%02x", *cp++);
 
@@ -343,26 +355,27 @@ print_ip_data (icmphdr_t * icmp, void *data _GL_UNUSED_PARAMETER)
 {
   int hlen;
   unsigned char *cp;
-  struct ip *ip = &icmp->icmp_ip;
+  struct ip_hdr *ip = &icmp->icmp_ip;
 
   print_ip_header (ip);
 
-  hlen = ip->ip_hl << 2;
+  // hlen = ip->ip_hl << 2;
+	hlen = IPH_HL(ip);
   cp = (unsigned char *) ip + hlen;
 
-  if (ip->ip_p == IPPROTO_TCP)
+  if (ip->_proto == IPPROTO_TCP)
     printf ("TCP: from port %u, to port %u (decimal)\n",
 	    (*cp * 256 + *(cp + 1)), (*(cp + 2) * 256 + *(cp + 3)));
-  else if (ip->ip_p == IPPROTO_UDP)
+  else if (ip->_proto == IPPROTO_UDP)
     printf ("UDP: from port %u, to port %u (decimal)\n",
 	    (*cp * 256 + *(cp + 1)), (*(cp + 2) * 256 + *(cp + 3)));
-  else if (ip->ip_p == IPPROTO_ICMP)
+  else if (ip->_proto == IPPROTO_ICMP)
     {
       int type = *cp;
       int code = *(cp + 1);
 
       printf ("ICMP: type %u, code %u, size %u", type, code,
-	      ntohs (ip->ip_len) - hlen);
+	      ntohs (ip->_len) - hlen);
       if (type == ICMP_ECHOREPLY || type == ICMP_ECHO)
 	printf (", id 0x%04x, seq 0x%04x", *(cp + 4) * 256 + *(cp + 5),
 		*(cp + 6) * 256 + *(cp + 7));
@@ -406,20 +419,21 @@ struct icmp_diag icmp_diag[] = {
 
 void
 print_icmp_header (struct sockaddr_in *from,
-		   struct ip *ip, icmphdr_t * icmp, int len)
+		   struct ip_hdr *ip, icmphdr_t * icmp, int len)
 {
   int hlen;
-  struct ip *orig_ip;
+  struct ip_hdr *orig_ip;
   char *s;
   struct icmp_diag *p;
 
   /* Length of the IP header */
-  hlen = ip->ip_hl << 2;
+  // hlen = ip->ip_hl << 2;
+	hlen = IPH_HL(ip);
   /* Original IP header */
   orig_ip = &icmp->icmp_ip;
 
   if (!(options & OPT_VERBOSE
-	|| orig_ip->ip_dst.s_addr == ping->ping_dest.ping_sockaddr.sin_addr.s_addr))
+	|| orig_ip->dest.addr == ping->ping_dest.ping_sockaddr.sin_addr.s_addr))
     return;
 
   s = ipaddr2str ((struct sockaddr *) from, sizeof (*from));
@@ -441,7 +455,7 @@ print_icmp_header (struct sockaddr_in *from,
 }
 
 void
-print_ip_opt (struct ip *ip, int hlen)
+print_ip_opt (struct ip_hdr *ip, int hlen)
 {
   unsigned char *cp;
   int i, j, k, l;
@@ -450,7 +464,7 @@ print_ip_opt (struct ip *ip, int hlen)
 
   cp = (unsigned char *) (ip + 1);
 
-  for (; hlen > (int) sizeof (struct ip); --hlen, ++cp)
+  for (; hlen > (int) sizeof (struct ip_hdr); --hlen, ++cp)
     switch (*cp)
       {
       case IPOPT_EOL:
