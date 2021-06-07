@@ -190,11 +190,11 @@ ping_xmit (PING * p)
 static int
 my_echo_reply (PING * p, icmphdr_t * icmp)
 {
-  struct ip *orig_ip = &icmp->icmp_ip;
+  struct ip_hdr *orig_ip = &icmp->icmp_ip;
   icmphdr_t *orig_icmp = (icmphdr_t *) (orig_ip + 1);
 
-  return (orig_ip->ip_dst.s_addr == p->ping_dest.ping_sockaddr.sin_addr.s_addr
-	  && orig_ip->ip_p == IPPROTO_ICMP
+  return (orig_ip->dest.addr == p->ping_dest.ping_sockaddr.sin_addr.s_addr
+	  && orig_ip->_proto == IPPROTO_ICMP
 	  && orig_icmp->icmp_type == ICMP_ECHO
 	  && (ntohs (orig_icmp->icmp_id) == p->ping_ident || useless_ident));
 }
@@ -205,7 +205,7 @@ ping_recv (PING * p)
   socklen_t fromlen = sizeof (p->ping_from.ping_sockaddr);
   int n, rc;
   icmphdr_t *icmp;
-  struct ip *ip;
+  struct ip_hdr *ip;
   int dupflag;
 
   n = recvfrom (p->ping_fd,
