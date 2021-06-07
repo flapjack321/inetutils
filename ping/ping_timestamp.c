@@ -47,10 +47,10 @@
 
 static int recv_timestamp (int code, void *closure,
 			   struct sockaddr_in *dest, struct sockaddr_in *from,
-			   struct ip *ip, icmphdr_t * icmp, int datalen);
+			   struct ip_hdr *ip, icmphdr_t * icmp, int datalen);
 static void print_timestamp (int dupflag, void *closure,
 			     struct sockaddr_in *dest,
-			     struct sockaddr_in *from, struct ip *ip,
+			     struct sockaddr_in *from, struct ip_hdr *ip,
 			     icmphdr_t * icmp, int datalen);
 static int timestamp_finish (void);
 
@@ -61,8 +61,10 @@ ping_timestamp (char *hostname)
   ping_set_event_handler (ping, recv_timestamp, NULL);
   ping_set_packetsize (ping, ICMP_TSLEN);
 
-  if (ping_set_dest (ping, hostname))
-    error (EXIT_FAILURE, 0, "unknown host");
+  if (ping_set_dest (ping, hostname)) {
+		fprintf(stderr, "unknown host\n");
+		exit(EXIT_FAILURE);
+	}
 
   printf ("PING %s (%s): sending timestamp requests\n",
 	  ping->ping_hostname, inet_ntoa (ping->ping_dest.ping_sockaddr.sin_addr));
@@ -74,7 +76,7 @@ ping_timestamp (char *hostname)
 int
 recv_timestamp (int code, void *closure,
 		struct sockaddr_in *dest, struct sockaddr_in *from,
-		struct ip *ip, icmphdr_t * icmp, int datalen)
+		struct ip_hdr *ip, icmphdr_t * icmp, int datalen)
 {
   switch (code)
     {
@@ -94,7 +96,7 @@ void
 print_timestamp (int dupflag, void *closure _GL_UNUSED_PARAMETER,
 		 struct sockaddr_in *dest _GL_UNUSED_PARAMETER,
 		 struct sockaddr_in *from,
-		 struct ip *ip _GL_UNUSED_PARAMETER,
+		 struct ip_hdr *ip _GL_UNUSED_PARAMETER,
 		 icmphdr_t * icmp, int datalen)
 {
   char timestr[16];
