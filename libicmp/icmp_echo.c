@@ -31,6 +31,9 @@
 #include <arpa/inet.h>
 #include <icmp.h>
 
+// Macros for struct ip_hdr fields
+#include <lwip/prot/ip4.h>
+
 int
 icmp_generic_encode (unsigned char * buffer, size_t bufsize, int type, int ident,
 		     int seqno)
@@ -52,16 +55,17 @@ icmp_generic_encode (unsigned char * buffer, size_t bufsize, int type, int ident
 
 int
 icmp_generic_decode (unsigned char * buffer, size_t bufsize,
-		     struct ip **ipp, icmphdr_t ** icmpp)
+		     struct ip_hdr **ipp, icmphdr_t ** icmpp)
 {
   size_t hlen;
   unsigned short cksum;
-  struct ip *ip;
+  struct ip_hdr *ip;
   icmphdr_t *icmp;
 
   /* IP header */
-  ip = (struct ip *) buffer;
-  hlen = ip->ip_hl << 2;
+  ip = (struct ip_hdr *) buffer;
+//  hlen = ip->ip_hl << 2;
+  hlen = IPH_HL(ip);
   if (bufsize < hlen + ICMP_MINLEN)
     return -1;
 
@@ -89,7 +93,7 @@ icmp_echo_encode (unsigned char * buffer, size_t bufsize, int ident, int seqno)
 
 int
 icmp_echo_decode (unsigned char * buffer, size_t bufsize,
-		  struct ip **ipp, icmphdr_t ** icmpp)
+		  struct ip_hdr **ipp, icmphdr_t ** icmpp)
 {
   return icmp_generic_decode (buffer, bufsize, ipp, icmpp);
 }
