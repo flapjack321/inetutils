@@ -51,7 +51,7 @@
 #include <unused-parameter.h>
 #include <ping.h>
 #include "ping_impl.h"
-#include "libinetutils.h"
+#include <libinetutils.h>
 
 extern int ping_echo (char *hostname);
 extern int ping_timestamp (char *hostname);
@@ -166,8 +166,10 @@ parse_opt (int key, char *arg, struct argp_state *state)
         argp_error (state, "invalid value (`%s' near `%s')", arg, endptr);
       options |= OPT_INTERVAL;
       interval = v * PING_PRECISION;
-      if (!is_root && interval < PING_MIN_USER_INTERVAL)
-        error (EXIT_FAILURE, 0, "option value too small: %s", arg);
+      if (!is_root && interval < PING_MIN_USER_INTERVAL) {
+        fprintf(stderr, "option value is too small: %s\n", arg);
+        exit(EXIT_FAILURE);
+      }
       break;
 
     case 'r':
@@ -213,8 +215,10 @@ parse_opt (int key, char *arg, struct argp_state *state)
 
     case 'l':
       preload = strtoul (arg, &endptr, 0);
-      if (*endptr || preload > INT_MAX)
-        error (EXIT_FAILURE, 0, "invalid preload value (%s)", arg);
+      if (*endptr || preload > INT_MAX) {
+        fprintf(stderr, "invalid preload value (%s)\n", arg);
+        exit(EXIT_FAILURE);
+      }
       break;
 
     case 'f':
@@ -292,8 +296,10 @@ main (int argc, char **argv)
   ping_set_sockopt (ping, SO_BROADCAST, (char *) &one, sizeof (one));
 
   /* Reset root privileges */
-  if (setuid (getuid ()) != 0)
-    error (EXIT_FAILURE, errno, "setuid");
+  if (setuid (getuid ()) != 0) {
+    fprintf(stderr, "setuid error %d\n", errno);
+    exit(EXIT_FAILURE);
+  }
 
   /* Force line buffering regardless of output device.  */
   setvbuf (stdout, NULL, _IOLBF, 0);
@@ -312,13 +318,18 @@ main (int argc, char **argv)
 
   if (ttl > 0)
     if (setsockopt (ping->ping_fd, IPPROTO_IP, IP_TTL,
-		    &ttl, sizeof (ttl)) < 0)
-      error (0, errno, "setsockopt(IP_TTL)");
+		    &ttl, sizeof (ttl)) < 0) {
+          fprintf(stderr, "setsockopt(IP_TTL)\n");
+          exit(errno);
+        }
 
-  if (tos >= 0)
+  if (tos >= 0) {
     if (setsockopt (ping->ping_fd, IPPROTO_IP, IP_TOS,
-		    &tos, sizeof (tos)) < 0)
-      error (0, errno, "setsockopt(IP_TOS)");
+        &tos, sizeof (tos)) < 0) {
+          fprintf(stderr, "setsockopt(IP_TOS)\n");
+          exit(errno);
+        }
+  }
 
   init_data_buffer (patptr, pattern_len);
 
@@ -337,20 +348,22 @@ int (*decode_type (const char *arg)) (char *hostname)
 {
   int (*ping_type) (char *hostname) = NULL;
 
-  if (strcasecmp (arg, "echo") == 0)
+  if (strcasecmp (arg, "echo") == 0) {
     ping_type = ping_echo;
-  else if (strcasecmp (arg, "timestamp") == 0)
+  } else if (strcasecmp (arg, "timestamp") == 0) {
     ping_type = ping_timestamp;
-  else if (strcasecmp (arg, "address") == 0)
+  } else if (strcasecmp (arg, "address") == 0) {
     ping_type = ping_address;
-  else if (strcasecmp (arg, "mask") == 0)
+  } else if (strcasecmp (arg, "mask") == 0) {
     ping_type = ping_address;
 #if 0
-  else if (strcasecmp (arg, "router") == 0)
+  } else if (strcasecmp (arg, "router") == 0) {
     ping_type = ping_router;
 #endif
-  else
-    error (EXIT_FAILURE, 0, "unsupported packet type: %s", arg);
+  } else {
+    fprintf(stderr, "unsupported packet type: %s\n", arg);
+    exit(EXIT_FAILURE);
+  }
 
  return ping_type;
 }
@@ -360,16 +373,18 @@ decode_ip_timestamp (char *arg)
 {
   int sopt = 0;
 
-  if (strcasecmp (arg, "tsonly") == 0)
+  if (strcasecmp (arg, "tsonly") == 0) {
     sopt = SOPT_TSONLY;
-  else if (strcasecmp (arg, "tsaddr") == 0)
+  } else if (strcasecmp (arg, "tsaddr") == 0) {
     sopt = SOPT_TSADDR;
 #if 0	/* Not yet implemented.  */
-  else if (strcasecmp (arg, "prespec") == 0)
+  } else if (strcasecmp (arg, "prespec") == 0) {
     sopt = SOPT_TSPRESPEC;
 #endif
-  else
-    error (EXIT_FAILURE, 0, "unsupported timestamp type: %s", arg);
+  } else {
+    fprintf(stderr, "unsupported timestamp type: %s\n", arg);
+    exit(EXIT_FAILURE);
+  }
 
   return sopt;
 }
@@ -447,8 +462,10 @@ ping_run (PING * ping, int (*finish) ())
       n = select (fdmax, &fdset, NULL, NULL, &resp_time);
       if (n < 0)
 	{
-	  if (errno != EINTR)
-	    error (EXIT_FAILURE, errno, "select failed");
+	  if (errno != EINTR) {
+      fprintf(stderr, "select failed\n");
+      exit(EXIT_FAILURE);
+    }
 	  continue;
 	}
       else if (n == 1)
@@ -516,8 +533,10 @@ send_echo (PING * ping)
 		   USE_IPV6);
 
   rc = ping_xmit (ping);
-  if (rc < 0)
-    error (EXIT_FAILURE, errno, "sending packet");
+  if (rc < 0) {
+    fprintf(stderr, "sending packet\n");
+    exit(EXIT_FAILURE);
+  }
 
   return rc;
 }
