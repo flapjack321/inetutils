@@ -163,7 +163,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case 'i':
       v = strtod (arg, &endptr);
       if (*endptr)
-        argp_error (state, "invalid value (`%s' near `%s')", arg, endptr);
+        __argp_error (state, "invalid value (`%s' near `%s')", arg, endptr);
       options |= OPT_INTERVAL;
       interval = v * PING_PRECISION;
       if (!is_root && interval < PING_MIN_USER_INTERVAL) {
@@ -255,7 +255,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
       break;
 
     case ARGP_KEY_NO_ARGS:
-      argp_error (state, "missing host operand");
+      __argp_error (state, "missing host operand");
 
       /* FALLTHROUGH */
     default:
@@ -286,7 +286,7 @@ main (int argc, char **argv)
 
   /* Parse command line */
   iu_argp_init ("ping", program_authors);
-  argp_parse (&argp, argc, argv, 0, &index, NULL);
+  __argp_parse (&argp, argc, argv, 0, &index, NULL);
 
   ping = ping_init (ICMP_ECHO, getpid ());
   if (ping == NULL)
