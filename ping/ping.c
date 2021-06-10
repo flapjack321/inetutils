@@ -546,8 +546,8 @@ ping_finish (void)
 {
   fflush (stdout);
   printf ("--- %s ping statistics ---\n", ping->ping_hostname);
-  printf ("%zu packets transmitted, ", ping->ping_num_xmit);
-  printf ("%zu packets received, ", ping->ping_num_recv);
+  printf ("%lu packets transmitted, ", (unsigned long)ping->ping_num_xmit);
+  printf ("%lu packets received, ", (unsigned long)ping->ping_num_recv);
   if (ping->ping_num_rept)
     printf ("+%zu duplicates, ", ping->ping_num_rept);
   if (ping->ping_num_xmit)

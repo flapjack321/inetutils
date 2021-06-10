@@ -150,7 +150,7 @@ ping_echo (char *hostname)
 #endif /* IP_OPTIONS */
     }
 
-  printf ("PING %s (%s): %zu data bytes",
+  printf ("PING %s (%s): %lu data bytes",
 	  ping->ping_hostname,
 	  inet_ntoa (ping->ping_dest.ping_sockaddr.sin_addr), data_length);
   if (options & OPT_VERBOSE)
@@ -197,7 +197,8 @@ print_echo (int dupflag, struct ping_stat *ping_stat,
 
   /* Length of IP header */
   // hlen = ip->ip_hl << 2;
-	hlen = IPH_HL(ip);
+	// hlen = IPH_HL(ip);
+	hlen = (ip->_v_hl & 0x0F) << 2;
 
   /* Length of ICMP header+payload */
   datalen -= hlen;
@@ -315,7 +316,8 @@ print_ip_header (struct ip_hdr *ip)
   unsigned char *cp;
 
   // hlen = ip->ip_hl << 2;
-	hlen = IPH_HL(ip);
+	// hlen = IPH_HL(ip);
+	hlen = (ip->_v_hl & 0x0F) << 2;
   cp = (unsigned char *) ip + sizeof (*ip);	/* point to options */
 
   if (options & OPT_VERBOSE)
@@ -360,7 +362,8 @@ print_ip_data (icmphdr_t * icmp, void *data _GL_UNUSED_PARAMETER)
   print_ip_header (ip);
 
   // hlen = ip->ip_hl << 2;
-	hlen = IPH_HL(ip);
+	// hlen = IPH_HL(ip);
+	hlen = (ip->_v_hl & 0x0F) << 2;
   cp = (unsigned char *) ip + hlen;
 
   if (ip->_proto == IPPROTO_TCP)
@@ -428,7 +431,8 @@ print_icmp_header (struct sockaddr_in *from,
 
   /* Length of the IP header */
   // hlen = ip->ip_hl << 2;
-	hlen = IPH_HL(ip);
+	// hlen = IPH_HL(ip);
+	hlen = (ip->_v_hl & 0x0F) << 2;
   /* Original IP header */
   orig_ip = &icmp->icmp_ip;
 
