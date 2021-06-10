@@ -65,7 +65,7 @@ icmp_generic_decode (unsigned char * buffer, size_t bufsize,
   /* IP header */
   ip = (struct ip_hdr *) buffer;
 //  hlen = ip->ip_hl << 2;
-  hlen = IPH_HL(ip);
+	hlen = (ip->_v_hl & 0x0F) << 2;
   if (bufsize < hlen + ICMP_MINLEN)
     return -1;
 
