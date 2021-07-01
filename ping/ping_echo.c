@@ -48,6 +48,10 @@
 #include <ping.h>
 #include "ping_impl.h"
 
+#ifdef CONFIG_INETUTILS_UKSTORE_SUPPORT_DEBUG
+# include <uk/store.h>
+#endif
+
 #define NROUTES		9	/* number of record route slots */
 #ifndef MAX_IPOPTLEN
 # define MAX_IPOPTLEN 40
@@ -66,6 +70,12 @@ static int echo_finish (void);
 void print_icmp_header (struct sockaddr_in *from,
 			struct ip_hdr *ip, icmphdr_t * icmp, int len);
 static void print_ip_opt (struct ip_hdr *ip, int hlen);
+
+#ifdef CONFIG_INETUTILS_UKSTORE_SUPPORT
+int64_t minimum_ping_time = -1;
+int64_t maximum_ping_time = -1;
+int64_t latest_ping_time = -1;
+#endif
 
 int
 ping_echo (char *hostname)
@@ -192,6 +202,9 @@ print_echo (int dupflag, struct ping_stat *ping_stat,
   struct timeval tv;
   int timing = 0;
   double triptime = 0.0;
+#ifdef CONFIG_INETUTILS_UKSTORE_SUPPORT
+	int64_t triptime_ns;
+#endif
 
   gettimeofday (&tv, NULL);
 
@@ -237,6 +250,20 @@ print_echo (int dupflag, struct ping_stat *ping_stat,
 	  inet_ntoa (*(struct in_addr *) &from->sin_addr.s_addr),
 	  ntohs (icmp->icmp_seq));
   printf (" ttl=%d", ip->_ttl);
+
+#ifdef CONFIG_INETUTILS_UKSTORE_SUPPORT
+	triptime_ns = triptime * 1000 * 1000;
+	if (minimum_ping_time == -1 || triptime_ns < minimum_ping_time) {
+		// fprintf(stderr, "DEBUG: updating the minimum ping time to %ld ns\n", triptime_ns);
+		minimum_ping_time = triptime_ns;
+	}
+	if (maximum_ping_time == -1 || maximum_ping_time < triptime_ns) {
+		// fprintf(stderr, "DEBUG: updating the maximum ping time to %ld ns\n", triptime_ns);
+		maximum_ping_time = triptime_ns;
+	}
+	latest_ping_time = triptime_ns;
+#endif
+
   if (timing)
     printf (" time=%.3f ms", triptime);
   if (dupflag)
@@ -656,6 +683,29 @@ echo_finish (void)
 
       printf ("round-trip min/avg/max/stddev = %.3f/%.3f/%.3f/%.3f ms\n",
 	      ping_stat->tmin, avg, ping_stat->tmax, nsqrt (vari, 0.0005));
+#ifdef CONFIG_INETUTILS_UKSTORE_SUPPORT_DEBUG
+		    int ukret;
+		    int64_t storage;
+		    struct uk_store_entry *my_entry;
+
+		    fprintf(stderr, "DEBUG: getting the minimum ping from ukstore\n");
+		    my_entry = uk_store_get_entry(libinetutils, NULL, "ping_minimum");
+		    fprintf(stderr, "DEBUG: attempting to use uk_store_get_value(%p, ...)\n", my_entry);
+		    ukret = uk_store_get_value(my_entry, s64, &storage);
+		    if (ukret == 0)
+		      fprintf(stderr, "DEBUG: used ukstore to get minimum latency entry => %"PRId64"\n", storage);
+		    else
+		      fprintf(stderr, "DEBUG: ukstore returned non-zero code (%d). failed\n", ukret);
+
+		    fprintf(stderr, "DEBUG: getting the maximum ping from ukstore\n");
+		    my_entry = uk_store_get_entry(libinetutils, NULL, "ping_maximum");
+		    fprintf(stderr, "DEBUG: attempting to use uk_store_get_value(%p, ...)\n", my_entry);
+		    ukret = uk_store_get_value(my_entry, s64, &storage);
+		    if (ukret == 0)
+		      fprintf(stderr, "DEBUG: used ukstore to get maximum latency entry => %"PRId64"\n", storage);
+		    else
+		      fprintf(stderr, "DEBUG: ukstore returned non-zero code (%d). failed\n", ukret);
+#endif
     }
   return (ping->ping_num_recv == 0);
 }

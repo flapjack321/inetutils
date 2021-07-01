@@ -21,6 +21,21 @@
 
 #define USE_IPV6 0
 
+#ifdef CONFIG_INETUTILS_UKSTORE_SUPPORT
+extern int64_t minimum_ping_time;
+extern int64_t maximum_ping_time;
+extern int64_t latest_ping_time;
+
+int latest_getter(__s64 *dst);
+int min_getter(__s64 *dst);
+int max_getter(__s64 *dst);
+
+# include <uk/store.h>
+UK_STORE_STATIC_ENTRY(ping_latest, s64, latest_getter, NULL);
+UK_STORE_STATIC_ENTRY(ping_minimum, s64, min_getter, NULL);
+UK_STORE_STATIC_ENTRY(ping_maximum, s64, max_getter, NULL);
+#endif
+
 PING *ping_init (int type, int ident);
 void ping_reset (PING * p);
 void ping_set_type (PING * p, int type);

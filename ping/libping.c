@@ -45,6 +45,24 @@ static int useless_ident = 0;	/* Relevant at least for Linux.  */
 
 static size_t _ping_packetsize (PING * p);
 
+#ifdef CONFIG_INETUTILS_UKSTORE_SUPPORT
+/*** ukstore functions ***/
+int latest_getter(__s64 *dst) {
+  *dst = latest_ping_time;
+  return 0;
+}
+
+int min_getter(__s64 *dst) {
+  *dst = minimum_ping_time;
+  return 0;
+}
+
+int max_getter(__s64 *dst) {
+  *dst = maximum_ping_time;
+  return 0;
+}
+#endif
+
 size_t
 _ping_packetsize (PING * p)
 {
